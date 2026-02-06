@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>sendtokindle</title>
+    <style>
+      :root {
+        --bg: #ffffff;
+        --fg: #111111;
+        --muted: #666666;
+        --line: #e6e6e6;
+        --link: #111111;
+      }
+      html, body { background: var(--bg); color: var(--fg); margin: 0; padding: 0; }
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans", sans-serif; }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 18px 16px 28px; }
+      h1 { font-size: 18px; margin: 0 0 10px; font-weight: 650; }
+      .hint { color: var(--muted); font-size: 13px; line-height: 1.4; margin-bottom: 14px; }
+      .list { border-top: 1px solid var(--line); }
+      .row { padding: 12px 0; border-bottom: 1px solid var(--line); display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+      .left { min-width: 0; }
+      .name a { color: var(--link); text-decoration: none; font-size: 15px; font-weight: 560; overflow-wrap: anywhere; word-break: break-word; }
+      .meta { color: var(--muted); font-size: 12px; margin-top: 4px; }
+      .btn { display: inline-block; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); text-decoration: none; color: var(--fg); font-size: 13px; font-weight: 650; white-space: nowrap; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Books</h1>
+      <div class="hint">同一局域网中，在电脑上传文件后，这里会自动出现可下载的电子书。</div>
+      <div class="list">
+        {{- if .Books }}
+          {{- range .Books }}
+            <div class="row">
+              <div class="left">
+                <div class="name"><a href="/books/{{ .Name }}">{{ .Name }}</a></div>
+                <div class="meta">{{ formatBytes .Size }} · {{ formatTime .ModTime }}</div>
+              </div>
+              <a class="btn" href="/books/{{ .Name }}">下载</a>
+            </div>
+          {{- end }}
+        {{- else }}
+          <div class="row">
+            <div class="left">
+              <div class="name">暂无文件</div>
+              <div class="meta">请先在电脑端管理页上传</div>
+            </div>
+          </div>
+        {{- end }}
+      </div>
+    </div>
+  </body>
+</html>

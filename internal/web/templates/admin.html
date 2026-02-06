@@ -1,0 +1,265 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>sendtokindle admin</title>
+    <style>
+      :root {
+        --bg: #ffffff;
+        --fg: #111111;
+        --muted: #666666;
+        --line: #e6e6e6;
+        --panel: #fafafa;
+        --btn: #111111;
+        --btnfg: #ffffff;
+        --danger: #b00020;
+      }
+      html, body { background: var(--bg); color: var(--fg); margin: 0; padding: 0; }
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Noto Sans", sans-serif; }
+      .wrap { max-width: 920px; margin: 0 auto; padding: 18px 16px 28px; }
+      h1 { font-size: 18px; margin: 0 0 12px; font-weight: 650; }
+      .hint { color: var(--muted); font-size: 13px; line-height: 1.4; margin-bottom: 16px; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+      .card { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 12px; }
+      .card h2 { font-size: 14px; margin: 0 0 10px; font-weight: 650; }
+      .drop { border: 1px dashed var(--line); border-radius: 10px; padding: 22px; background: #fff; cursor: pointer; min-height: 140px; display: flex; align-items: center; justify-content: center; text-align: center; }
+      .drop p { margin: 0; color: var(--muted); font-size: 13px; max-width: 520px; }
+      .row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+      input[type="file"] { width: 100%; }
+      button { appearance: none; border: 0; border-radius: 8px; padding: 8px 10px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+      .row button { flex: 0 0 auto; white-space: nowrap; }
+      .btn { background: var(--btn); color: var(--btnfg); }
+      .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+      .btnDanger { background: transparent; color: var(--danger); border: 1px solid rgba(176,0,32,0.2); min-width: 64px; display: inline-flex; align-items: center; justify-content: center; }
+      .actions { flex: 0 0 auto; }
+      .list { margin-top: 10px; border-top: 1px solid var(--line); }
+      .item { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+      .name { font-weight: 600; font-size: 13px; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+      .meta { color: var(--muted); font-size: 12px; margin-top: 3px; }
+      .left { min-width: 0; }
+      .status { margin-top: 10px; color: var(--muted); font-size: 12px; }
+      .link { color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--line); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Admin</h1>
+      <div class="hint">
+        <div>
+          目录：<code>{{ .StoreRoot }}</code>
+          <button class="btn" id="openDirBtn" type="button">打开目录</button>
+        </div>
+        <div>
+          Kindle：
+          {{- if .KindleURL }}
+            <a class="link" href="{{ .KindleURL }}" target="_blank" rel="noreferrer">{{ .KindleURL }}</a>
+          {{- else }}
+            <a class="link" href="/" target="_blank" rel="noreferrer">http://&lt;本机局域网IP&gt;:&lt;port&gt;/</a>
+          {{- end }}
+        </div>
+      </div>
+      <div class="status" id="openDirStatus"></div>
+
+      <div class="grid">
+        <div class="card">
+          <h2>上传</h2>
+          <div class="drop" id="drop" tabindex="0" role="button" aria-label="选择文件或拖拽上传">
+            <p>点击选择文件，或拖拽文件到这里（将自动上传）。</p>
+            <input id="file" type="file" style="display:none" />
+          </div>
+          <div class="status" id="uploadStatus"></div>
+        </div>
+
+        <div class="card">
+          <h2>服务器文件</h2>
+          <div class="list" id="list"></div>
+          <div class="status" id="listStatus"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var fileInput = document.getElementById('file');
+        var uploadStatus = document.getElementById('uploadStatus');
+        var listEl = document.getElementById('list');
+        var listStatus = document.getElementById('listStatus');
+        var drop = document.getElementById('drop');
+        var uploading = false;
+        var openDirBtn = document.getElementById('openDirBtn');
+        var openDirStatus = document.getElementById('openDirStatus');
+
+        function formatBytes(n) {
+          var unit = 1024;
+          if (n < unit) return n + ' B';
+          var div = unit, exp = 0;
+          while (n / div >= unit && exp < 5) { div *= unit; exp++; }
+          var value = n / div;
+          var suffixes = ['KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB'];
+          return value.toFixed(1) + ' ' + suffixes[exp];
+        }
+
+        function formatTime(iso) {
+          try {
+            var d = new Date(iso);
+            if (isNaN(d.getTime())) return iso;
+            var y = d.getFullYear();
+            var m = String(d.getMonth() + 1);
+            var day = String(d.getDate());
+            var hh = String(d.getHours());
+            var mm = String(d.getMinutes());
+            if (m.length < 2) m = '0' + m;
+            if (day.length < 2) day = '0' + day;
+            if (hh.length < 2) hh = '0' + hh;
+            if (mm.length < 2) mm = '0' + mm;
+            return y + '-' + m + '-' + day + ' ' + hh + ':' + mm;
+          } catch (e) {
+            return iso;
+          }
+        }
+
+        function setStatus(el, msg) {
+          el.textContent = msg || '';
+        }
+
+        function api(method, path, body) {
+          return fetch(path, {
+            method: method,
+            headers: body ? { 'Content-Type': 'application/json' } : undefined,
+            body: body ? JSON.stringify(body) : undefined
+          }).then(function (res) {
+            if (!res.ok) {
+              return res.json().catch(function(){ return {}; }).then(function (e) {
+                var msg = (e && e.error) ? e.error : ('HTTP ' + res.status);
+                throw new Error(msg);
+              });
+            }
+            if (res.status === 204) return null;
+            return res.json();
+          });
+        }
+
+        function refreshList() {
+          setStatus(listStatus, '加载中…');
+          api('GET', '/api/books').then(function (books) {
+            listEl.innerHTML = '';
+            if (!books || !books.length) {
+              listEl.innerHTML = '<div class="item"><div class="left"><div class="name">暂无文件</div><div class="meta">上传后这里会显示</div></div></div>';
+              setStatus(listStatus, '');
+              return;
+            }
+            for (var i = 0; i < books.length; i++) {
+              (function (b) {
+                var item = document.createElement('div');
+                item.className = 'item';
+                var left = document.createElement('div');
+                left.className = 'left';
+                var name = document.createElement('div');
+                name.className = 'name';
+                name.textContent = b.name;
+                var meta = document.createElement('div');
+                meta.className = 'meta';
+                meta.textContent = formatBytes(b.size) + ' · ' + formatTime(b.modTime);
+                left.appendChild(name);
+                left.appendChild(meta);
+
+                var right = document.createElement('div');
+                right.className = 'actions';
+                var del = document.createElement('button');
+                del.className = 'btnDanger';
+                del.textContent = '删除';
+                del.onclick = function () {
+                  if (!confirm('删除 ' + b.name + ' ?')) return;
+                  del.disabled = true;
+                  api('POST', '/api/books/delete', { name: b.name })
+                    .then(function () { refreshList(); })
+                    .catch(function (e) { alert(e.message || '删除失败'); del.disabled = false; });
+                };
+                right.appendChild(del);
+
+                item.appendChild(left);
+                item.appendChild(right);
+                listEl.appendChild(item);
+              })(books[i]);
+            }
+            setStatus(listStatus, '');
+          }).catch(function (e) {
+            setStatus(listStatus, '加载失败：' + (e.message || 'unknown'));
+          });
+        }
+
+        if (openDirBtn) {
+          openDirBtn.onclick = function () {
+            setStatus(openDirStatus, '正在打开…');
+            fetch('/api/open-storage', { method: 'POST' })
+              .then(function (res) {
+                if (res.status === 204) return;
+                return res.json().catch(function () { return {}; }).then(function (e) {
+                  var msg = (e && e.error) ? e.error : ('HTTP ' + res.status);
+                  throw new Error(msg);
+                });
+              })
+              .then(function () {
+                setStatus(openDirStatus, '已打开目录');
+              })
+              .catch(function (e) {
+                setStatus(openDirStatus, '打开失败：' + (e.message || 'unknown'));
+              });
+          };
+        }
+
+        function uploadFile(f) {
+          if (!f) return;
+          if (uploading) return;
+          uploading = true;
+          setStatus(uploadStatus, '上传中… ' + f.name);
+          var form = new FormData();
+          form.append('file', f, f.name);
+          fetch('/api/books', { method: 'POST', body: form })
+            .then(function (res) {
+              if (!res.ok) {
+                return res.json().catch(function(){ return {}; }).then(function (e) {
+                  throw new Error((e && e.error) ? e.error : ('HTTP ' + res.status));
+                });
+              }
+              return res.json();
+            })
+            .then(function () {
+              setStatus(uploadStatus, '上传成功：' + f.name);
+              fileInput.value = '';
+              refreshList();
+            })
+            .catch(function (e) {
+              setStatus(uploadStatus, '上传失败：' + (e.message || 'unknown'));
+            })
+            .finally(function () {
+              uploading = false;
+            });
+        }
+
+        drop.addEventListener('click', function () { fileInput.click(); });
+        drop.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            fileInput.click();
+          }
+        });
+        fileInput.addEventListener('change', function () {
+          var f = fileInput.files && fileInput.files[0];
+          uploadFile(f);
+        });
+
+        drop.addEventListener('dragover', function (e) { e.preventDefault(); });
+        drop.addEventListener('drop', function (e) {
+          e.preventDefault();
+          if (!e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
+          uploadFile(e.dataTransfer.files[0]);
+        });
+
+        refreshList();
+      })();
+    </script>
+  </body>
+</html>
