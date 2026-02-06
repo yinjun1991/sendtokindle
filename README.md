@@ -29,6 +29,17 @@ Upload eBooks from your computer and download them on your Kindle (or any device
 - `--dir`  
   Folder to store uploaded books (default: `~/.sendtokindle`).
 
+## macOS: first run
+
+If macOS blocks the binary with a security warning, you can allow it once:
+
+- Finder: right click the `sendtokindle` binary → **Open** → **Open**
+- Or remove the quarantine attribute:
+
+```bash
+xattr -d com.apple.quarantine ./sendtokindle
+```
+
 Examples:
 
 ```bash
