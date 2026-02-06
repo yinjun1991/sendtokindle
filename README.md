@@ -17,7 +17,7 @@ Upload eBooks from your computer and download them on your Kindle (or any device
    - http://localhost:8090/admin
 
 4. On the admin page:
-   - Upload your `.epub` / `.pdf` files
+   - Upload files your Kindle can open (for example: `.azw3`, `.azw`, `.mobi`, `.txt`)
    - Copy the **Kindle** link shown there and open it in the Kindle browser
    - Tap **Download** on the book you want
 
