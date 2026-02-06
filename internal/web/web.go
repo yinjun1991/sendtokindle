@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-//go:embed templates/*
+//go:embed templates/index.html templates/admin.html
 var templatesFS embed.FS
 
 type Renderer struct {
@@ -61,4 +61,3 @@ func (r *Renderer) RenderIndex(w io.Writer, data any) error {
 func (r *Renderer) RenderAdmin(w io.Writer, data any) error {
 	return r.adminTmpl.Execute(w, data)
 }
-

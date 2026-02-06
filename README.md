@@ -4,17 +4,19 @@ Upload eBooks from your computer and download them on your Kindle (or any device
 
 ## Quick Start
 
-1. Start the server:
+1. Download the binary for your OS from the GitHub Releases page.
+
+2. Start the server:
 
    ```bash
-   go run ./cmd/sendtokindle --port 8090
+   ./sendtokindle --port 8090
    ```
 
-2. Open the admin page on your computer:
+3. Open the admin page on your computer:
 
    - http://localhost:8090/admin
 
-3. On the admin page:
+4. On the admin page:
    - Upload your `.epub` / `.pdf` files
    - Copy the **Kindle** link shown there and open it in the Kindle browser
    - Tap **Download** on the book you want
@@ -22,7 +24,7 @@ Upload eBooks from your computer and download them on your Kindle (or any device
 ## Options
 
 - `--port`  
-  HTTP port to listen on (default: `8080`).
+  Port to listen on (default: `8080`).
 
 - `--dir`  
   Folder to store uploaded books (default: `~/.sendtokindle`).
@@ -31,9 +33,8 @@ Examples:
 
 ```bash
 # Use a custom storage folder
-go run ./cmd/sendtokindle --port 8090 --dir "$HOME/.sendtokindle"
+ ./sendtokindle --port 8090 --dir "$HOME/.sendtokindle"
 
 # Use another port
-go run ./cmd/sendtokindle --port 8081
+ ./sendtokindle --port 8081
 ```
-
